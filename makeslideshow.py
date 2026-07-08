@@ -3,8 +3,8 @@
 Batch slideshow generator — one MP4 per subdirectory.
 
 Point it at a folder containing subdirectories full of images.
-Each subdirectory becomes its own slideshow video saved in the
-current working directory.
+Each subdirectory becomes its own slideshow video saved to
+~/Videos/SlideshowClips/ (created automatically if needed).
 
 - 4.5 s per image, 0.5 s transitions, 30 fps, 1080p
 - transitions are randomised but never repeat back-to-back
@@ -12,8 +12,8 @@ current working directory.
 - only .jpg / .jpeg / .png files are used
 
 Usage:
-  python3 makeslideshow.py ~/photos/funeral_slides/
-  → childhood.mp4  wedding.mp4  service.mp4  (in the current directory)
+  makeslideshow ~/photos/funeral/
+  → ~/Videos/SlideshowClips/childhood.mp4  wedding.mp4  service.mp4
 
 Requires: ffmpeg >= 4.3  (with xfade filter)
 """
@@ -246,8 +246,9 @@ def main():
     print(f"Found {len(subdirs)} subdirector{'y' if len(subdirs) == 1 else 'ies'} "
           f"in {args.image_dir}\n")
 
-    # output goes into cwd
-    out_dir = os.getcwd()
+    # output goes into ~/Videos/SlideshowClips/
+    out_dir = os.path.expanduser("~/Videos/SlideshowClips")
+    os.makedirs(out_dir, exist_ok=True)
 
     temp_dir = args.temp_dir or tempfile.mkdtemp(prefix="slideshow_")
     os.makedirs(temp_dir, exist_ok=True)
@@ -281,7 +282,7 @@ def main():
             done += 1
             print(f"  →  {out_path}\n")
 
-        print(f"Done — {done} video(s) saved to {out_dir}/"
+        print(f"\nDone — {done} clip(s) saved to {out_dir}/"
               + (f"  ({skipped} skipped)" if skipped else ""))
 
     finally:
