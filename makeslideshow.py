@@ -27,17 +27,36 @@ import sys
 import tempfile
 from pathlib import Path
 
-# ── dynamic transitions  (sliding / wiping / directional — no fades) ─────────
+# ── dynamic transitions  (grouped by style, no boring fades) ─────────────────
 TRANSITIONS = [
+    # wipes — directional erases
     "wipeleft", "wiperight", "wipeup", "wipedown",
+    "wipetl", "wipetr", "wipebl", "wipebr",
+    # slides — push the frame
     "slideleft", "slideright", "slideup", "slidedown",
     "smoothleft", "smoothright", "smoothup", "smoothdown",
-    "diagbl", "diagbr", "diagtl", "diagtr",
+    # covers / reveals — one image moves over / under the other
+    "coverleft", "coverright", "coverup", "coverdown",
+    "revealleft", "revealright", "revealup", "revealdown",
+    # diagonals
+    "diagtl", "diagtr", "diagbl", "diagbr",
+    # slices — bands sweep in from the edge
     "hlslice", "hrslice", "vuslice", "vdslice",
-    "circlecrop", "circleopen", "circleclose",
-    "rectcrop", "distance",
+    # wind — blurred push from edge
+    "hlwind", "hrwind", "vuwind", "vdwind",
+    # open / close — mattes that shrink or expand
+    "horzopen", "horzclose", "vertopen", "vertclose",
+    "circleopen", "circleclose",
+    # crop / geometry — shapes grow / shrink
+    "circlecrop", "rectcrop",
+    "radial",
+    # squeeze — compress out / in
+    "squeezeh", "squeezev",
+    # zoom / blur / pixelate / dissolve
+    "zoomin",
+    "hblur",
     "pixelize", "dissolve",
-    "hblur", "fadegrays",
+    "fadegrays", "distance",
 ]
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
