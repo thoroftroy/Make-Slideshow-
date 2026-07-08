@@ -1,81 +1,100 @@
 #!/usr/bin/env bash
-# Install makeslideshow as a global terminal command.
+# makeslideshow — one-command installer / updater / uninstaller
 #
-#   ./install.sh           — install to ~/.local/bin/
-#   ./install.sh --uninstall  — remove it
-#
-# After install you can run:  makeslideshow ~/photos/
+#   curl -O https://raw.githubusercontent.com/thoroftroy/Make-Slideshow-/main/install.sh
+#   bash install.sh               # install or update
+#   bash install.sh --uninstall   # remove everything
 
 set -euo pipefail
 
+REPO="https://github.com/thoroftroy/Make-Slideshow-.git"
 INSTALL_DIR="$HOME/.local/bin"
+CACHE_DIR="$HOME/.local/share/makeslideshow"
 CMD_NAME="makeslideshow"
 TARGET="$INSTALL_DIR/$CMD_NAME"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SOURCE="$SCRIPT_DIR/makeslideshow.py"
 
-# ── uninstall ────────────────────────────────────────────────────────────
+# ── uninstall ────────────────────────────────────────────────────────────────
 if [ "${1:-}" = "--uninstall" ]; then
+    removed=()
     if [ -f "$TARGET" ]; then
         rm "$TARGET"
-        echo "Removed $TARGET"
-        echo "Note: the PATH entry in .bashrc (if any) was left alone — edit by hand or ignore."
-    else
-        echo "Not installed — $TARGET does not exist"
+        removed+=("$TARGET")
     fi
+    if [ -d "$CACHE_DIR" ]; then
+        rm -rf "$CACHE_DIR"
+        removed+=("$CACHE_DIR")
+    fi
+    if [ ${#removed[@]} -gt 0 ]; then
+        echo "Removed: ${removed[*]}"
+    else
+        echo "Nothing to remove — not installed."
+    fi
+    echo "Note: PATH entry in shell rc files was left alone.  Edit by hand if desired."
     exit 0
 fi
 
-# ── checks ───────────────────────────────────────────────────────────────
-if [ ! -f "$SOURCE" ]; then
-    echo "Error: cannot find $SOURCE — run this script from the same folder as makeslideshow.py"
+# ── dependencies ─────────────────────────────────────────────────────────────
+if ! command -v git &>/dev/null; then
+    echo "Error: git is required.  Install it:  apt install git  /  dnf install git  …"
     exit 1
 fi
-
 if ! command -v ffmpeg &>/dev/null; then
-    echo "Error: ffmpeg is not installed.  Install it first (apt install ffmpeg / dnf install ffmpeg …)"
+    echo "Error: ffmpeg is required.  Install it:  apt install ffmpeg  /  dnf install ffmpeg  …"
     exit 1
 fi
 
-# ── install ──────────────────────────────────────────────────────────────
+# ── clone or update the repo ─────────────────────────────────────────────────
+if [ -d "$CACHE_DIR/.git" ]; then
+    echo "▸ Updating from $REPO ..."
+    git -C "$CACHE_DIR" pull --ff-only 2>&1 || {
+        echo "Pull failed — trying fresh clone ..."
+        rm -rf "$CACHE_DIR"
+        git clone "$REPO" "$CACHE_DIR"
+    }
+else
+    mkdir -p "$(dirname "$CACHE_DIR")"
+    echo "▸ Cloning $REPO ..."
+    git clone "$REPO" "$CACHE_DIR"
+fi
+
+# ── install the script ───────────────────────────────────────────────────────
 mkdir -p "$INSTALL_DIR"
-cp "$SOURCE" "$TARGET"
+cp "$CACHE_DIR/makeslideshow.py" "$TARGET"
 chmod +x "$TARGET"
 
-# make sure ~/.local/bin is on PATH
+# ── add ~/.local/bin to PATH if needed ──────────────────────────────────────
 SHELL_RC=""
 for rc in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zshrc"; do
-    if [ -f "$rc" ]; then
-        SHELL_RC="$rc"
-        break
-    fi
+    [ -f "$rc" ] && { SHELL_RC="$rc"; break; }
 done
-
 if [ -z "$SHELL_RC" ]; then
     SHELL_RC="$HOME/.bashrc"
     touch "$SHELL_RC"
 fi
 
 if ! grep -qF "$INSTALL_DIR" "$SHELL_RC" 2>/dev/null; then
-    echo "" >> "$SHELL_RC"
-    echo "# added by makeslideshow installer" >> "$SHELL_RC"
-    echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$SHELL_RC"
-    echo "  → added $INSTALL_DIR to $SHELL_RC"
+    printf '\n# added by makeslideshow installer\nexport PATH="%s:$PATH"\n' "$INSTALL_DIR" >> "$SHELL_RC"
+    echo "   → added $INSTALL_DIR to $SHELL_RC"
 fi
 
-# reload PATH for this session
 export PATH="$INSTALL_DIR:$PATH"
 
-# verify
+# ── verify ──────────────────────────────────────────────────────────────────
 if "$TARGET" --help &>/dev/null; then
     echo ""
-    echo "✓  makeslideshow is installed"
+    echo "✓  makeslideshow is ready"
     echo ""
-    echo "    Run it from anywhere:"
+    echo "    Run it anywhere:"
     echo "      makeslideshow ~/photos/funeral/"
+    echo "      makeslideshow                  (uses current directory)"
     echo ""
     echo "    Clips are saved to ~/Videos/SlideshowClips/"
-    echo "    You may need to restart your terminal or:  source $SHELL_RC"
+    echo "    Re-run this script anytime to update."
+    echo ""
+    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+        echo "    Restart your terminal, or:  source $SHELL_RC"
+    fi
 else
-    echo "Warning: $TARGET --help failed — something may be wrong"
+    echo "Error: $TARGET --help failed — something went wrong"
+    exit 1
 fi
