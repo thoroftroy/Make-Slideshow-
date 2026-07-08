@@ -159,8 +159,8 @@ def main():
         description="Create a slideshow MP4 for each subdirectory of IMAGE_DIR"
     )
     parser.add_argument(
-        "image_dir",
-        help="Parent folder — each subdirectory becomes its own slideshow",
+        "image_dir", nargs="?", default=None,
+        help="Parent folder — each subdirectory becomes its own slideshow  [default: current directory]",
     )
     parser.add_argument(
         "-d", "--duration", type=float, default=4.5,
@@ -237,14 +237,17 @@ def main():
     if args.seed is not None:
         random.seed(args.seed)
 
+    # default to current directory if none given
+    root = args.image_dir or os.getcwd()
+
     # discover subdirectories
-    subdirs = get_subdirs(args.image_dir)
+    subdirs = get_subdirs(root)
     if not subdirs:
-        print(f"No subdirectories found in {args.image_dir}", file=sys.stderr)
+        print(f"No subdirectories found in {root}", file=sys.stderr)
         sys.exit(1)
 
     print(f"Found {len(subdirs)} subdirector{'y' if len(subdirs) == 1 else 'ies'} "
-          f"in {args.image_dir}\n")
+          f"in {root}\n")
 
     # output goes into ~/Videos/SlideshowClips/
     out_dir = os.path.expanduser("~/Videos/SlideshowClips")
