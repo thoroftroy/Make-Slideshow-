@@ -21,6 +21,7 @@ Requires: ffmpeg >= 4.3  (with xfade filter)
 import argparse
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -58,8 +59,16 @@ TRANSITIONS = [
     "pixelize", "dissolve",
     "fadegrays", "distance",
 ]
-
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+
+
+def natkey(s):
+    """Natural sort key: splits string into text / int chunks so 10 > 2."""
+    return [
+        int(t) if t.isdigit() else t.lower()
+        for t in re.split(r"(\d+)", s)
+    ]
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,8 +77,8 @@ def get_images(directory):
     if not p.is_dir():
         return []
     return sorted(
-        str(f) for f in p.iterdir()
-        if f.suffix.lower() in IMAGE_EXTENSIONS
+        (str(f) for f in p.iterdir() if f.suffix.lower() in IMAGE_EXTENSIONS),
+        key=lambda p: natkey(os.path.basename(p)),
     )
 
 
